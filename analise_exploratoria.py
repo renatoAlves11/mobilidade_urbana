@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import glob
 import os
-from statistics_mob_urb import getStatistics
 
 pontos_por_linha = {
     "343": {
@@ -135,7 +134,31 @@ def process_file(filepath):
             return 'Tendência: Neutra'
     df['TREND_DIRECTION'] = df['DIRECTION_CUMSUM'].apply(interpret_trend)
 
-    getStatistics(filepath,df)
+    df_ida = df[df['VECTOR_DIRECTION'] == 'Ida A → B']
+    df_volta = df[df['VECTOR_DIRECTION'] == 'Volta B → A']
+
+    #Coletar estátisticas para análise
+
+    lat_ida_mean = np.mean(df_ida['LATITUDE'])
+    long_ida_mean = np.mean(df_ida['LONGITUDE'])
+    lat_ida_median = np.median(df_ida['LATITUDE'])
+    long_ida_median = np.median(df_ida['LONGITUDE'])
+
+    lat_volta_mean = np.mean(df_volta['LATITUDE'])
+    long_volta_mean = np.mean(df_volta['LONGITUDE'])
+    lat_volta_median = np.median(df_volta['LATITUDE'])
+    long_volta_median = np.median(df_volta['LONGITUDE'])
+
+    lat_mean = np.mean(df['LATITUDE'])
+    long_mean = np.mean(df['LONGITUDE'])
+    lat_median = np.median(df['LATITUDE'])
+    long_median = np.median(df['LONGITUDE'])
+
+    velocity_mean = np.mean(df['VELOCITY'])
+
+    lat_std = np.std(df['LATITUDE'])
+    long_std = np.std(df['LONGITUDE'])
+    velocity_std = np.std(df['VELOCITY'])
 
      # Plot 1
     colors = ['green' if d == "Ida A → B" else 'red' if d == "Volta B → A" else 'blue' for d in df['VECTOR_DIRECTION']]
@@ -149,6 +172,12 @@ def process_file(filepath):
     plt.ylabel("Latitude")
     plt.grid(True)
     plt.axis('equal')
+    plt.plot(long_ida_mean, lat_ida_mean, 'x', color='green', markersize=8)
+    plt.plot(long_volta_mean, lat_volta_mean, 'x', color='red', markersize=8)
+    plt.plot(long_mean, lat_mean, 'x', color='purple', markersize=8)
+    plt.plot(long_ida_median, lat_ida_median, 'o', color='green', markersize=12)
+    plt.plot(long_volta_median, lat_volta_median, 'o', color='red', markersize=12)
+    plt.plot(long_median, lat_median, 'o', color='purple', markersize=12)
     plt.legend(handles=[
          mpatches.Patch(color='green', label='Ida A → B'),
          mpatches.Patch(color='red', label='Volta B → A'),
@@ -157,6 +186,7 @@ def process_file(filepath):
          plt.Line2D([], [], marker='o', color='w', label='Ponto B (Saída)', markerfacecolor='orange', markersize=8)
      ])
     plt.show()
+
     # Plot 2
     plt.figure(figsize=(12, 4))
     plt.plot(df['DIRECTION_CUMSUM'], label='Soma acumulada da direção', color='purple')
@@ -167,6 +197,7 @@ def process_file(filepath):
     plt.grid(True)
     plt.legend()
     plt.show()
+   
     # Plot 3
     trend_colors = df['TREND_DIRECTION'].map({
          'Tendência: Ida': 'green',
