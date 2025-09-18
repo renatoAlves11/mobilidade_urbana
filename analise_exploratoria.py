@@ -137,68 +137,66 @@ def process_file(filepath):
 
     getStatistics(filepath,df)
 
-    # # Plot 1
-    # colors = ['green' if d == "Ida A → B" else 'red' if d == "Volta B → A" else 'blue' for d in df['VECTOR_DIRECTION']]
-    # plt.figure(figsize=(12, 6))
-    # plt.scatter(df['LONGITUDE'], df['LATITUDE'], c=colors, s=10)
-    # plt.plot(df['LONGITUDE'], df['LATITUDE'], linestyle='--', alpha=0.5)
-    # plt.scatter(*A, color='black', label='Ponto A (Chegada)', zorder=5)
-    # plt.scatter(*B, color='orange', label='Ponto B (Saída)', zorder=5)
-    # plt.title(f"Direção Instantânea (Produto Escalar) - {os.path.splitext(os.path.basename(filepath))[0]}")
-    # plt.xlabel("Longitude")
-    # plt.ylabel("Latitude")
-    # plt.grid(True)
-    # plt.axis('equal')
-    # plt.legend(handles=[
-    #     mpatches.Patch(color='green', label='Ida A → B'),
-    #     mpatches.Patch(color='red', label='Volta B → A'),
-    #     mpatches.Patch(color='blue', label='Parado/Indefinido'),
-    #     plt.Line2D([], [], marker='o', color='w', label='Ponto A (Chegada)', markerfacecolor='black', markersize=8),
-    #     plt.Line2D([], [], marker='o', color='w', label='Ponto B (Saída)', markerfacecolor='orange', markersize=8)
-    # ])
-    # plt.show()
-
-    # # Plot 2
-    # plt.figure(figsize=(12, 4))
-    # plt.plot(df['DIRECTION_CUMSUM'], label='Soma acumulada da direção', color='purple')
-    # plt.axhline(0, color='gray', linestyle='--')
-    # plt.title(f"Tendência Acumulada da Direção (Cumsum) - {os.path.splitext(os.path.basename(filepath))[0]}")
-    # plt.xlabel("Índice do ponto")
-    # plt.ylabel("Acúmulo da direção")
-    # plt.grid(True)
-    # plt.legend()
-    # plt.show()
-
-    # # Plot 3
-    # trend_colors = df['TREND_DIRECTION'].map({
-    #     'Tendência: Ida': 'green',
-    #     'Tendência: Volta': 'red',
-    #     'Tendência: Neutra': 'gray'
-    # })
-    # plt.figure(figsize=(12, 6))
-    # plt.scatter(df['LONGITUDE'], df['LATITUDE'], c=trend_colors, s=10)
-    # plt.plot(df['LONGITUDE'], df['LATITUDE'], linestyle='--', alpha=0.5)
-    # plt.scatter(*A, color='black', label='Ponto A (Chegada)', zorder=5)
-    # plt.scatter(*B, color='orange', label='Ponto B (Saída)', zorder=5)
-    # plt.title(f"Mapa com Tendência Direcional Acumulada - {os.path.splitext(os.path.basename(filepath))[0]}")
-    # plt.xlabel("Longitude")
-    # plt.ylabel("Latitude")
-    # plt.grid(True)
-    # plt.axis('equal')
-    # plt.legend(handles=[
-    #     mpatches.Patch(color='green', label='Tendência: Ida'),
-    #     mpatches.Patch(color='red', label='Tendência: Volta'),
-    #     mpatches.Patch(color='gray', label='Tendência: Neutra'),
-    #     plt.Line2D([], [], marker='o', color='w', label='Ponto A (Chegada)', markerfacecolor='black', markersize=8),
-    #     plt.Line2D([], [], marker='o', color='w', label='Ponto B (Saída)', markerfacecolor='orange', markersize=8)
-    # ])
-    # plt.show()
+     # Plot 1
+    colors = ['green' if d == "Ida A → B" else 'red' if d == "Volta B → A" else 'blue' for d in df['VECTOR_DIRECTION']]
+    plt.figure(figsize=(12, 6))
+    plt.scatter(df['LONGITUDE'], df['LATITUDE'], c=colors, s=10)
+    plt.plot(df['LONGITUDE'], df['LATITUDE'], linestyle='--', alpha=0.5)
+    plt.scatter(*A, color='black', label='Ponto A (Chegada)', zorder=5)
+    plt.scatter(*B, color='orange', label='Ponto B (Saída)', zorder=5)
+    plt.title(f"Direção Instantânea (Produto Escalar) - {os.path.splitext(os.path.basename(filepath))[0]}")
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+    plt.grid(True)
+    plt.axis('equal')
+    plt.legend(handles=[
+         mpatches.Patch(color='green', label='Ida A → B'),
+         mpatches.Patch(color='red', label='Volta B → A'),
+         mpatches.Patch(color='blue', label='Parado/Indefinido'),
+         plt.Line2D([], [], marker='o', color='w', label='Ponto A (Chegada)', markerfacecolor='black', markersize=8),
+         plt.Line2D([], [], marker='o', color='w', label='Ponto B (Saída)', markerfacecolor='orange', markersize=8)
+     ])
+    plt.show()
+    # Plot 2
+    plt.figure(figsize=(12, 4))
+    plt.plot(df['DIRECTION_CUMSUM'], label='Soma acumulada da direção', color='purple')
+    plt.axhline(0, color='gray', linestyle='--')
+    plt.title(f"Tendência Acumulada da Direção (Cumsum) - {os.path.splitext(os.path.basename(filepath))[0]}")
+    plt.xlabel("Índice do ponto")
+    plt.ylabel("Acúmulo da direção")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+    # Plot 3
+    trend_colors = df['TREND_DIRECTION'].map({
+         'Tendência: Ida': 'green',
+         'Tendência: Volta': 'red',
+         'Tendência: Neutra': 'gray'
+     })
+    plt.figure(figsize=(12, 6))
+    plt.scatter(df['LONGITUDE'], df['LATITUDE'], c=trend_colors, s=10)
+    plt.plot(df['LONGITUDE'], df['LATITUDE'], linestyle='--', alpha=0.5)
+    plt.scatter(*A, color='black', label='Ponto A (Chegada)', zorder=5)
+    plt.scatter(*B, color='orange', label='Ponto B (Saída)', zorder=5)
+    plt.title(f"Mapa com Tendência Direcional Acumulada - {os.path.splitext(os.path.basename(filepath))[0]}")
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+    plt.grid(True)
+    plt.axis('equal')
+    plt.legend(handles=[
+         mpatches.Patch(color='green', label='Tendência: Ida'),
+         mpatches.Patch(color='red', label='Tendência: Volta'),
+         mpatches.Patch(color='gray', label='Tendência: Neutra'),
+         plt.Line2D([], [], marker='o', color='w', label='Ponto A (Chegada)', markerfacecolor='black', markersize=8),
+         plt.Line2D([], [], marker='o', color='w', label='Ponto B (Saída)', markerfacecolor='orange', markersize=8)
+     ])
+    plt.show()
 
 if __name__ == "__main__":
 
     # Obtém o caminho absoluto do diretório onde o script está
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    file_path = os.path.join(dir_path, "linha_455_ida_volta.RData")
+    file_path = os.path.join(dir_path, "linha_232_ida_volta.RData")
     
     # Processa o arquivo
     process_file(file_path)
