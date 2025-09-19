@@ -1,7 +1,7 @@
 # mapa_onibus_multilinhas_simplificado.py
 # Gera UM ÚNICO mapa com TODAS as linhas informadas em FILES,
-# com filtros por linha e por sentido (Ida/Volta) e terminais.
-# Classificação robusta: variação das distâncias aos terminais (dA/dB) com suavização.
+# com filtros por linha e por sentido (Ida/Volta) e terminais,
+# e, adicionalmente, camadas com pontos MÉDIOS e MEDIANOS (Geral/Ida/Volta) por linha e no GERAL.
 # Requer: pip install pyreadr folium branca
 
 import os
@@ -19,11 +19,9 @@ FILES = [
 ]
 OUT_HTML = "mapa_todas_linhas.html"
 
-# Parâmetros da classificação (ajuste se necessário)
-SMOOTH_WINDOW     = 5      # pontos para mediana móvel
-DELTA_THR_M       = 10.0   # variação mínima (m) em dA/dB p/ considerar evidência
-TERMINAL_RADIUS_M = 250.0  # raio (m) para detectar terminal
-MIN_STEP_M        = 15.0   # passo mínimo (m) p/ considerar movimento
+# Parâmetros
+TERMINAL_RADIUS_M = 250.0
+MIN_STEP_M        = 15.0
 
 # ----------------------------- Haversine -----------------------------
 def haversine(lat1, lon1, lat2, lon2):
@@ -58,45 +56,32 @@ def compute_terminals(df: pd.DataFrame):
         B = max_lon_point
     return tuple(A), tuple(B)  # (lon, lat)
 
-# --------------- Classificação por distância aos terminais ----------
+# --------- Classificação por RUN (soma de projeções i->i+1) ----------
 def classify_by_route_runs(
     df: pd.DataFrame, A, B,
     terminal_radius_m: float = TERMINAL_RADIUS_M,
     min_step_m: float = MIN_STEP_M
 ):
-    """
-    Rotula por TRECHOS (runs) entre terminais.
-    Para cada run (do terminal X até o próximo terminal Y), soma as projeções dos segmentos no eixo A→B.
-    - Soma > 0  => run inteiro 'Ida A → B'
-    - Soma < 0  => run inteiro 'Volta B → A'
-    Se o dataset não começa/termina exatamente em terminal, rotula o trecho inicial/final pela soma também.
-    """
     import numpy as np
-
-    # vetor eixo A->B em coordenadas (lon, lat)
     A = np.array(A, dtype=float)  # (lon, lat)
     B = np.array(B, dtype=float)
     vAB = B - A
 
-    # helper: distância terminal
     def dist_m_to(point_lon, point_lat, term):
         return haversine(point_lat, point_lon, term[1], term[0]) * 1000.0
 
     def which_terminal(lon, lat):
         dA = dist_m_to(lon, lat, A)
         dB = dist_m_to(lon, lat, B)
-        if dA <= terminal_radius_m:
-            return +1  # terminal A
-        if dB <= terminal_radius_m:
-            return -1  # terminal B
-        return 0      # nenhum
+        if dA <= terminal_radius_m: return +1
+        if dB <= terminal_radius_m: return -1
+        return 0
 
     n = len(df)
     if n < 2:
         return ["Parado/Perpendicular"] * n
 
-    # 1) compute projeção ao longo de A->B para cada segmento i->i+1 (com filtro de passo)
-    seg_proj = np.zeros(n-1, dtype=float)  # projeção assinada
+    seg_proj = np.zeros(n-1, dtype=float)
     for i in range(n-1):
         lon1, lat1 = float(df.iloc[i]["LONGITUDE"]), float(df.iloc[i]["LATITUDE"])
         lon2, lat2 = float(df.iloc[i+1]["LONGITUDE"]), float(df.iloc[i+1]["LATITUDE"])
@@ -105,9 +90,8 @@ def classify_by_route_runs(
             seg_proj[i] = 0.0
             continue
         mv = np.array([lon2 - lon1, lat2 - lat1], dtype=float)
-        seg_proj[i] = float(np.dot(mv, vAB))  # projeção (escala arbitrária; o sinal é o que importa)
+        seg_proj[i] = float(np.dot(mv, vAB))
 
-    # 2) encontre "marcos" de terminal (índices), para segmentar runs
     term_hits = []
     for i in range(n):
         lon, lat = float(df.iloc[i]["LONGITUDE"]), float(df.iloc[i]["LATITUDE"])
@@ -115,62 +99,65 @@ def classify_by_route_runs(
         if t != 0:
             term_hits.append(i)
 
-    # 3) constroi os runs: pares [start_idx, end_idx] (inclusive), cada um termina em um terminal
     runs = []
     if len(term_hits) == 0:
-        # não passou por terminal: um único run do começo ao fim
         runs.append((0, n-1))
     else:
-        # pode haver um trecho antes do primeiro terminal detectado
         first_hit = term_hits[0]
         if first_hit > 0:
             runs.append((0, first_hit))
-
-        # runs completos entre hits consecutivos
         for a, b in zip(term_hits, term_hits[1:]):
             if b > a:
                 runs.append((a, b))
-
-        # pode haver um trecho depois do último terminal
         last_hit = term_hits[-1]
         if last_hit < n-1:
             runs.append((last_hit, n-1))
 
-    # 4) para cada run, soma seg_proj dentro do run e rotula todo o run pelo sinal da soma
     labels = np.zeros(n, dtype=int)  # +1 ida, -1 volta, 0 indef
     for (s, e) in runs:
-        # segmentos válidos do run: i = s .. e-1
-        if e > s:
-            total = float(np.nansum(seg_proj[s:e]))
-        else:
-            total = 0.0
-
+        total = float(np.nansum(seg_proj[s:e])) if e > s else 0.0
         if total > 0:
-            lab = +1  # Ida A → B
+            lab = +1
         elif total < 0:
-            lab = -1  # Volta B → A
+            lab = -1
         else:
-            # empate: decide pelo terminal de origem/destino se houver, senão pelo delta de dA/dB
             lon_s, lat_s = float(df.iloc[s]["LONGITUDE"]), float(df.iloc[s]["LATITUDE"])
             lon_e, lat_e = float(df.iloc[e]["LONGITUDE"]), float(df.iloc[e]["LATITUDE"])
             dAs = dist_m_to(lon_s, lat_s, A); dAe = dist_m_to(lon_e, lat_e, A)
             dBs = dist_m_to(lon_s, lat_s, B); dBe = dist_m_to(lon_e, lat_e, B)
-            # se aproximou de B e afastou de A → ida; vice-versa → volta
             ida_evidence   = (dBe < dBs) and (dAe > dAs)
             volta_evidence = (dAe < dAs) and (dBe > dBs)
-            if ida_evidence and not volta_evidence:
-                lab = +1
-            elif volta_evidence and not ida_evidence:
-                lab = -1
-            else:
-                # fallback: compara distâncias finais (mais perto de qual terminal?)
-                lab = +1 if dBe < dAe else -1
+            if ida_evidence and not volta_evidence: lab = +1
+            elif volta_evidence and not ida_evidence: lab = -1
+            else: lab = +1 if dBe < dAe else -1
+        labels[s:e+1] = lab
 
-        labels[s:e+1] = lab  # o run inteiro recebe a mesma etiqueta
-
-    # 5) mapeia para strings finais
     map_label = {+1: "Ida A → B", -1: "Volta B → A", 0: "Parado/Perpendicular"}
     return [map_label[int(x)] for x in labels.tolist()]
+
+# =================== NOVO: Centros (média/mediana) ===================
+def centers_for_df(df: pd.DataFrame):
+    """
+    Retorna lista de:
+      (escopo, mean_lat, mean_lon, median_lat, median_lon, n)
+    com escopos: 'Geral', 'Ida', 'Volta'
+    """
+    out = []
+    subsets = {
+        "Geral": df,
+        "Ida":   df[df["VECTOR_DIRECTION"] == "Ida A → B"],
+        "Volta": df[df["VECTOR_DIRECTION"] == "Volta B → A"],
+    }
+    for escopo, sub in subsets.items():
+        if len(sub) == 0:
+            out.append((escopo, np.nan, np.nan, np.nan, np.nan, 0))
+            continue
+        mean_lat = float(np.nanmean(sub["LATITUDE"]))
+        mean_lon = float(np.nanmean(sub["LONGITUDE"]))
+        med_lat  = float(np.nanmedian(sub["LATITUDE"]))
+        med_lon  = float(np.nanmedian(sub["LONGITUDE"]))
+        out.append((escopo, mean_lat, mean_lon, med_lat, med_lon, int(len(sub))))
+    return out
 
 # -------------------------- Mapa Folium ------------------------------
 def build_map_multilines(datasets, out_html: str):
@@ -180,22 +167,31 @@ def build_map_multilines(datasets, out_html: str):
     center = [float(np.nanmean(all_lat)), float(np.nanmean(all_lon))]
     m = folium.Map(location=center, zoom_start=12, tiles="CartoDB positron")
 
+    # coletores para centros gerais
+    centers_general_rows = []
+
     for d in datasets:
         name = d['name']
         df = d['df']
         A  = d['A']
         B  = d['B']
 
+        # camadas de trajetos
         g_ida   = folium.FeatureGroup(name=f"Linha {name} — Ida (A → B)", overlay=True, show=True)
         g_volta = folium.FeatureGroup(name=f"Linha {name} — Volta (B → A)", overlay=True, show=True)
         g_term  = folium.FeatureGroup(name=f"Terminais — {name}", overlay=True, show=True)
 
+        # NOVO: camadas de centros por linha
+        g_cent_mean   = folium.FeatureGroup(name=f"Centros (média) — {name}", overlay=True, show=False)
+        g_cent_median = folium.FeatureGroup(name=f"Centros (mediana) — {name}", overlay=True, show=False)
+
+        # terminais
         folium.Marker([A[1], A[0]], tooltip=f"Linha {name} — Ponto A", icon=folium.Icon(color="black")).add_to(g_term)
         folium.Marker([B[1], B[0]], tooltip=f"Linha {name} — Ponto B", icon=folium.Icon(color="orange")).add_to(g_term)
 
+        # trajetos
         color = {"Ida A → B": "green", "Volta B → A": "red"}
         arr = df[["LATITUDE","LONGITUDE","VECTOR_DIRECTION"]].values
-
         for i in range(len(arr)-1):
             lat1, lon1, dir1 = arr[i]
             lat2, lon2, _    = arr[i+1]
@@ -206,8 +202,71 @@ def build_map_multilines(datasets, out_html: str):
             elif dir1 == "Volta B → A":
                 seg.add_to(g_volta)
 
-        g_ida.add_to(m); g_volta.add_to(m); g_term.add_to(m)
+        # centros (média/mediana) por linha
+        centers = centers_for_df(df)
+        # cores por escopo dos centros
+        scope_color = {"Geral": "black", "Ida": "green", "Volta": "red"}
 
+        for escopo, mean_lat, mean_lon, med_lat, med_lon, n in centers:
+            if n == 0:  # nada a marcar
+                continue
+            # marcador de MÉDIA
+            folium.Marker(
+                location=[mean_lat, mean_lon],
+                tooltip=f"{name} — {escopo} • MÉDIA",
+                icon=folium.Icon(color=scope_color[escopo], icon="ok-sign"),
+            ).add_to(g_cent_mean)
+            # marcador de MEDIANA
+            folium.Marker(
+                location=[med_lat, med_lon],
+                tooltip=f"{name} — {escopo} • MEDIANA",
+                icon=folium.Icon(color=scope_color[escopo], icon="star"),
+            ).add_to(g_cent_median)
+
+            # acumula para centros gerais
+            centers_general_rows.append({
+                "escopo": escopo,
+                "mean_lat": mean_lat, "mean_lon": mean_lon,
+                "median_lat": med_lat, "median_lon": med_lon
+            })
+
+        # adiciona camadas da linha
+        g_ida.add_to(m); g_volta.add_to(m); g_term.add_to(m)
+        g_cent_mean.add_to(m); g_cent_median.add_to(m)
+
+    # --------- Centros GERAIS (todas as linhas juntas) ----------
+    if centers_general_rows:
+        # agrega por escopo (média das médias e mediana das medianas por simplicidade)
+        dfc = pd.DataFrame(centers_general_rows)
+        # média geral dos centros (não dos pontos!): suficiente p/ referência visual
+        mean_general = dfc.groupby("escopo", as_index=False)[["mean_lat","mean_lon"]].mean(numeric_only=True)
+        median_general = dfc.groupby("escopo", as_index=False)[["median_lat","median_lon"]].median(numeric_only=True)
+
+        g_cent_mean_all   = folium.FeatureGroup(name="Centros (média) — GERAL", overlay=True, show=False)
+        g_cent_median_all = folium.FeatureGroup(name="Centros (mediana) — GERAL", overlay=True, show=False)
+
+        scope_color = {"Geral": "black", "Ida": "green", "Volta": "red"}
+
+        for _, row in mean_general.iterrows():
+            escopo = row["escopo"]
+            folium.Marker(
+                location=[float(row["mean_lat"]), float(row["mean_lon"])],
+                tooltip=f"GERAL — {escopo} • MÉDIA (dos centros)",
+                icon=folium.Icon(color=scope_color[escopo], icon="ok-sign"),
+            ).add_to(g_cent_mean_all)
+
+        for _, row in median_general.iterrows():
+            escopo = row["escopo"]
+            folium.Marker(
+                location=[float(row["median_lat"]), float(row["median_lon"])],
+                tooltip=f"GERAL — {escopo} • MEDIANA (dos centros)",
+                icon=folium.Icon(color=scope_color[escopo], icon="star"),
+            ).add_to(g_cent_median_all)
+
+        g_cent_mean_all.add_to(m)
+        g_cent_median_all.add_to(m)
+
+    # legenda fixa
     legend_html = """
     {% macro html(this, kwargs) %}
     <div style="
@@ -216,14 +275,9 @@ def build_map_multilines(datasets, out_html: str):
        background: white; padding: 10px 12px; border:2px solid #444; border-radius: 6px;
        box-shadow: 0 1px 4px rgba(0,0,0,0.3); font-size: 14px;">
       <div style="font-weight:600; margin-bottom:6px;">Legenda</div>
-      <div style="display:flex; align-items:center; gap:8px; margin:4px 0;">
-        <span style="width:14px; height:4px; background:green; display:inline-block;"></span>
-        <span>Ida (A → B)</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:8px; margin:4px 0;">
-        <span style="width:14px; height:4px; background:red; display:inline-block;"></span>
-        <span>Volta (B → A)</span>
-      </div>
+      <div style="margin:4px 0;"><b>Cores</b>: <span style="color:green;">Ida</span>, <span style="color:red;">Volta</span>, <span>Preto</span> = Geral</div>
+      <div style="margin:4px 0;"><b>Ícones</b>: ✔ = Média, ★ = Mediana</div>
+      <div style="margin-top:6px;">Linhas: ative/desative camadas no painel (direita).</div>
     </div>
     {% endmacro %}
     """
