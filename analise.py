@@ -15,7 +15,7 @@ pontos_por_linha = {
 }
 
 # Lê CSV
-df = pd.read_csv("arquivo_unificado.csv")
+df = pd.read_csv("resultado_segmentacao_LINHA_600_C47603_COMPLETO.csv")
 
 # Gera dfs para coleta de estatísticas
 
@@ -57,7 +57,7 @@ for i in range(len(df)-1):
         lat2, lon2 = df.iloc[i+1][["LATITUDE", "LONGITUDE"]]
         ax.plot([lon1, lon2], [lat1, lat2], color="purple", linewidth=1, alpha=0.6)
 
-linha = "232"
+linha = "600"
 
 # Pontos fixos A e B
 ax.scatter([pontos_por_linha[linha]["A"][0]], [pontos_por_linha[linha]["A"][1]], color='yellow', s=100, label="Ponto A", zorder=5)
@@ -78,51 +78,51 @@ plt.tight_layout()
 plt.show()
 
 
-# # ====== 2. PLOT IDA vs VOLTA DINÂMICO ======
-# fig, ax = plt.subplots(figsize=(10, 6))
+# ====== 2. PLOT IDA vs VOLTA DINÂMICO ======
+fig, ax = plt.subplots(figsize=(10, 6))
 
-# # Mapa de cores
-# colors_map = {"Ida": "green", "Volta": "red", "Indefinido": "gray"}
+# Mapa de cores
+colors_map = {"Ida": "green", "Volta": "red", "Indefinido": "gray"}
 
-# # Pontos coloridos dinamicamente
-# for i in range(len(df)):
-#     classificacao = df.iloc[i]["SEGMENT_CLASSIFICATION"]
-#     cor = colors_map.get(classificacao, "blue")
+# Pontos coloridos dinamicamente
+for i in range(len(df)):
+    classificacao = df.iloc[i]["SEGMENT_CLASSIFICATION"]
+    cor = colors_map.get(classificacao, "blue")
 
-#     ax.scatter(df.iloc[i]["LONGITUDE"], df.iloc[i]["LATITUDE"],
-#                s=10, c=cor, alpha=0.6)
+    ax.scatter(df.iloc[i]["LONGITUDE"], df.iloc[i]["LATITUDE"],
+               s=10, c=cor, alpha=0.6)
 
-# # Linhas entre pontos consecutivos (também coloridas dinamicamente)
-# for i in range(len(df)-1):
-#     classificacao = df.iloc[i]["SEGMENT_CLASSIFICATION"]
-#     cor = colors_map.get(classificacao, "blue")
+# Linhas entre pontos consecutivos (também coloridas dinamicamente)
+for i in range(len(df)-1):
+    classificacao = df.iloc[i]["SEGMENT_CLASSIFICATION"]
+    cor = colors_map.get(classificacao, "blue")
 
-#     lat1, lon1 = df.iloc[i][["LATITUDE", "LONGITUDE"]]
-#     lat2, lon2 = df.iloc[i+1][["LATITUDE", "LONGITUDE"]]
-#     ax.plot([lon1, lon2], [lat1, lat2], color=cor, linewidth=1, alpha=0.6)
+    lat1, lon1 = df.iloc[i][["LATITUDE", "LONGITUDE"]]
+    lat2, lon2 = df.iloc[i+1][["LATITUDE", "LONGITUDE"]]
+    ax.plot([lon1, lon2], [lat1, lat2], color=cor, linewidth=1, alpha=0.6)
 
-# # Pontos fixos A e B
-# ax.scatter([pontos_por_linha[linha]["A"][0]], [pontos_por_linha[linha]["A"][1]], color='yellow', s=100, label="Ponto A", zorder=5)
-# ax.scatter([pontos_por_linha[linha]["B"][0]], [pontos_por_linha[linha]["B"][1]], color='black', s=100, label="Ponto B", zorder=5)
-# ax.scatter(long_ida_mean, lat_ida_mean, color='green', s=100, label="Ida", zorder=5, marker='x')
-# ax.scatter(long_volta_mean, lat_volta_mean, color='red', s=100, label="Volta", zorder=5, marker='x')
+# Pontos fixos A e B
+ax.scatter([pontos_por_linha[linha]["A"][0]], [pontos_por_linha[linha]["A"][1]], color='yellow', s=100, label="Ponto A", zorder=5)
+ax.scatter([pontos_por_linha[linha]["B"][0]], [pontos_por_linha[linha]["B"][1]], color='black', s=100, label="Ponto B", zorder=5)
+ax.scatter(long_ida_mean, lat_ida_mean, color='green', s=100, label="Ida", zorder=5, marker='x')
+ax.scatter(long_volta_mean, lat_volta_mean, color='red', s=100, label="Volta", zorder=5, marker='x')
 
-# # # Elipse 
-# # x_ellipse = long_ida_mean + long_ida_std * np.cos(theta)
-# # y_ellipse = lat_ida_mean + lat_ida_std * np.sin(theta)
-# # # ax.plot(x_ellipse, y_ellipse, color='green', linestyle='--', linewidth=1.5, label=f"Elipse Ida")
+# Elipse 
+x_ellipse = long_ida_mean + long_ida_std * np.cos(theta)
+y_ellipse = lat_ida_mean + lat_ida_std * np.sin(theta)
+ax.plot(x_ellipse, y_ellipse, color='green', linestyle='--', linewidth=1.5, label=f"Elipse Ida")
 
-# # x_ellipse = long_volta_mean + long_volta_std * np.cos(theta) 
-# # y_ellipse = lat_volta_mean + lat_volta_std * np.sin(theta) 
-# # # ax.plot(x_ellipse, y_ellipse, color='red', linestyle='--', linewidth=1.5, label=f"Elipse Volta")
+x_ellipse = long_volta_mean + long_volta_std * np.cos(theta) 
+y_ellipse = lat_volta_mean + lat_volta_std * np.sin(theta) 
+ax.plot(x_ellipse, y_ellipse, color='red', linestyle='--', linewidth=1.5, label=f"Elipse Volta")
 
-# # ax.set_xlabel("LONGITUDE")
-# # ax.set_ylabel("LATITUDE")
-# # ax.set_title("Trajetórias Ida e Volta (dinâmico)")
-# # ax.legend(loc='lower left')
+ax.set_xlabel("LONGITUDE")
+ax.set_ylabel("LATITUDE")
+ax.set_title("Trajetórias Ida e Volta (dinâmico)")
+ax.legend(loc='lower left')
 
-# # plt.tight_layout()
-# # plt.show()
+plt.tight_layout()
+plt.show()
 
 # === Folium Map ===
 m = folium.Map(location=[lat_mean, long_mean], zoom_start=12)
@@ -158,19 +158,20 @@ for i in range(len(df) - 1):
 
 # ---- Pontos Fixos A e B de todas as linhas ----
 for linha_key, pontos in pontos_por_linha.items():
-    # Ponto A
-    folium.Marker(
-        location=[pontos["A"][1], pontos["A"][0]],  # folium usa [lat, lon]
-        popup=f"Ponto A - Linha {linha_key}",
-        icon=folium.Icon(color="yellow", icon="flag")
-    ).add_to(m)
-    
-    # Ponto B
-    folium.Marker(
-        location=[pontos["B"][1], pontos["B"][0]],
-        popup=f"Ponto B - Linha {linha_key}",
-        icon=folium.Icon(color="black", icon="flag")
-    ).add_to(m)
+    if linha_key == '600':
+        # Ponto A
+        folium.Marker(
+            location=[pontos["A"][1], pontos["A"][0]],  # folium usa [lat, lon]
+            popup=f"Ponto A - Linha {linha_key}",
+            icon=folium.Icon(color="yellow", icon="flag")
+        ).add_to(m)
+        
+        # Ponto B
+        folium.Marker(
+            location=[pontos["B"][1], pontos["B"][0]],
+            popup=f"Ponto B - Linha {linha_key}",
+            icon=folium.Icon(color="black", icon="flag")
+        ).add_to(m)
 
 
 # ---- Médias ----
