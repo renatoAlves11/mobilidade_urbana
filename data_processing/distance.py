@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 def haversine_np(lon1, lat1, lon2, lat2):
     """Calcula a distância Haversine entre dois pontos na Terra.
@@ -28,36 +29,51 @@ def haversine_np(lon1, lat1, lon2, lat2):
     c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
     return R * c
 
-def distance(lat_origin, lon_origin, df):
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
 
+def distance(lat_origin, lon_origin, df):
+    print(f'Lat origin: {lat_origin}')
+    print(f'Long origin: {lon_origin}')
+    
     line = df.iloc[0]['LINE']
     unique_ids = df['BUSID'].unique()
     sample_size = min(5, unique_ids.shape[0])
     randNum = np.random.choice(unique_ids.shape[0], size=sample_size, replace=False)
     sample_ids = unique_ids[randNum].astype(str)
+    df = df[df['PARKING'].isna()]
 
     for j in range(sample_size):
         busid = sample_ids[j]
-
-        df_temp = df[(df['BUSID'] == busid)]
+        df_temp = df[df['BUSID'] == busid]
 
         if len(df_temp) < 1000:
             continue
 
-        distances = []
+        distances = haversine_np(
+            lon_origin,
+            lat_origin,
+            df_temp['LONGITUDE'].values,
+            df_temp['LATITUDE'].values
+        )
 
-        for i in range(len(df_temp)):
-            lat = df_temp.iloc[i]['LATITUDE']
-            lon = df_temp.iloc[i]['LONGITUDE']
-            dist = haversine_np(lon_origin, lat_origin, lon, lat)
-            distances.append(np.abs(dist))
+        # Converte GPS_TIMESTAMP para datetime
+        timestamps = pd.to_datetime(df_temp['GPSTIMESTAMP'])
 
-        t = np.arange(len(df_temp))  # tempo de 0 até len(df)-1
-        plt.figure(figsize=(10, 5))
-        plt.plot(t, distances, label='Distância (m)', color='royalblue')
-        plt.title(f'Módulo das distâncias em função do tempo t da linha {line} e ônibus {busid}')
-        plt.xlabel('Tempo (t)')
+        plt.figure(figsize=(12, 5))
+        plt.plot(timestamps, distances, label='Distância (m)', color='royalblue')
+
+        # Cria ticks a cada 30 minutos
+        start = timestamps.min().replace(minute=0, second=0)
+        end = timestamps.max().replace(minute=0, second=0) + pd.Timedelta(hours=1)
+        xticks = pd.date_range(start=start, end=end, freq='30min')
+        plt.xticks(xticks, [t.strftime('%H:%M') for t in xticks], rotation=45)
+
+        plt.title(f'Módulo das distâncias em função do tempo da linha {line} (ônibus {busid})')
+        plt.xlabel('Hora')
         plt.ylabel('Distância (m)')
         plt.grid(True, linestyle='--', alpha=0.7)
         plt.legend()
+        plt.tight_layout()
         plt.show()

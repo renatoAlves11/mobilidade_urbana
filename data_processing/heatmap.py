@@ -17,6 +17,9 @@ dataframes = [pd.read_csv(arquivo) for arquivo in arquivos_csv]
 
 for df in dataframes:
 
+    # Filtra apenas ônibus que não estão em garagem
+    df = df[df['PARKING'].isna()]
+
     line = df.iloc[0]['LINE']
 
     round_val = 3
@@ -25,7 +28,7 @@ for df in dataframes:
     df['LONGITUDE'] = df['LONGITUDE'].round(round_val)
 
     # Cria a tabela de frequência (latitudes nas linhas, longitudes nas colunas)
-    matriz = pd.crosstab(df['LONGITUDE'], df['LATITUDE'])
+    matriz = pd.crosstab(np.abs(df['LATITUDE']), df['LONGITUDE'])
 
     # Encontra o valor máximo da matriz
     max_freq = matriz.values.max()
@@ -46,21 +49,21 @@ for df in dataframes:
     print(f'Frequência máxima encontrada: {max_freq}')
     print(f'Coordenadas com frequência entre {limite_inferior} e {max_freq}:')
 
-    for lon, lat, val in zip(longitudes, latitudes, valores):
+    for lon, lat, val in zip(latitudes, longitudes, valores):
         print(f'  → Longitude: {lon}, Latitude: {lat}, Frequência: {val}')
 
     # Plot do heatmap
     plt.figure(figsize=(10, 8))
     sns.heatmap(
         matriz,
-        cmap='plasma',
+        cmap='Blues',
         cbar_kws={'label': 'Frequência'},
         square=True
     )
 
     plt.title(f'Mapa de Calor - Frequência de posições (Lat x Lon) da linha {line}\n(Valores entre {limite_inferior} e {max_freq})')
-    plt.xlabel('Latitude')
-    plt.ylabel('Longitude')
+    plt.xlabel('Longitude')
+    plt.ylabel('Latitude')
     plt.show()
 
     distance(matriz.index[0], matriz.columns[0], df)
