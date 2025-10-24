@@ -5,6 +5,7 @@ import pandas as pd
 import glob
 import os
 from distance import distance
+from compare_distances import comparar_distancias
 
 # Caminho do diretório com os CSVs
 diretorio = "data/bus_csv/sul"
@@ -28,7 +29,7 @@ for df in dataframes:
     df['LONGITUDE'] = df['LONGITUDE'].round(round_val)
 
     # Cria a tabela de frequência (latitudes nas linhas, longitudes nas colunas)
-    matriz = pd.crosstab(np.abs(df['LATITUDE']), df['LONGITUDE'])
+    matriz = pd.crosstab(df['LATITUDE'], df['LONGITUDE'])
 
     # Encontra o valor máximo da matriz
     max_freq = matriz.values.max()
@@ -55,7 +56,7 @@ for df in dataframes:
     # Plot do heatmap
     plt.figure(figsize=(10, 8))
     sns.heatmap(
-        matriz,
+        matriz[::-1],
         cmap='Blues',
         cbar_kws={'label': 'Frequência'},
         square=True
