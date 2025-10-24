@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 
 # Lendo os Parquets
-df_A = pd.read_parquet('data/parquets/G1-2023-02-21-A.parquet')
-df_B = pd.read_parquet('data/parquets/G1-2023-02-21-B.parquet')
+df_A = pd.read_parquet('parquets/G1-2023-02-21-A.parquet')
+df_B = pd.read_parquet('parquets/G1-2023-02-21-B.parquet')
 
 # Fazendo merge pelo ID
 df = df_A.merge(df_B, on='ID', how='left')  # 'left' mantém todos os registros de A
