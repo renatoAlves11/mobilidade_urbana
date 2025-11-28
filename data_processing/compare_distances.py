@@ -148,6 +148,6 @@ def comparar_distancias(lat_origin, lon_origin, df, limite_ruido=7, t=3, tol=2.0
 
 # Exemplo de uso:
 if __name__ == "__main__":
-    df = pd.read_csv('data/bus_csv/LINHA_432_COMPLETO.csv', sep=',')
+    df = pd.read_csv('../data/bus_csv/sul/LINHA_432_COMPLETO.csv', sep=',')
     lat_origin, lon_origin = -22.905, -43.176
     comparar_distancias(lat_origin, lon_origin, df, limite_ruido=7, t=5, tol=10.0)
